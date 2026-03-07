@@ -29,14 +29,14 @@ public class AllegrexResolveImports {
     private ExternalManager extMan;
     private FunctionManager functionManager;
 
-    public AllegrexResolveImports (Program program) {
+    public AllegrexResolveImports(Program program) {
         this.program = program;
         this.memory = program.getMemory();
         this.symbolTable = program.getSymbolTable();
         this.extMan = program.getExternalManager();
         this.functionManager = program.getFunctionManager();
     }
-    
+
     public void Resolve(Address imports_addr, Address imports_end, SectionTracker tracker, Boolean resolveNid) throws Exception {
 
         Object[] dts = createModuleImportStructs(program);
@@ -113,7 +113,9 @@ public class AllegrexResolveImports {
             addLabel(program, module.getAddress(), String.format("_%s_%04X_stub_head", moduleName, version), true, true);
 
             Library lib = extMan.getExternalLibrary(moduleName);
-            if (lib == null) lib = extMan.addExternalLibraryName(moduleName, SourceType.ANALYSIS);
+            if (lib == null) {
+                lib = extMan.addExternalLibraryName(moduleName, SourceType.ANALYSIS);
+            }
 
             int numVars = module.getComponent(4).getUnsignedByte(0);
             int numFuncs = module.getComponent(5).getUnsignedShort(0);
@@ -143,20 +145,19 @@ public class AllegrexResolveImports {
             }
 
             total_nids += numFuncs;
-            
-            if(nidsBase.getOffset() != 0) {
+
+            if (nidsBase.getOffset() != 0) {
                 nidAddrs.add(nidsBase.getOffset());
                 placeDataType(program, nidsBase, new ArrayDataType(UnsignedIntegerDataType.dataType, numFuncs, 4));
                 addLabel(program, nidsBase, moduleName + "_nids", true, false);
             }
-            
+
             // Resolver Functions
             for (int i = 0; i < numFuncs; i++) {
                 Address nidAddr = nidsBase.add(4 * i);
                 Address stubAddr = stubBase.add(8 * i);
 
                 String nidHex = String.format("0x%08X", memory.getInt(nidAddr));
-
                 String funcName = getNameForNID(moduleName, nidHex);
 
                 Function f = functionManager.getFunctionAt(stubAddr);
@@ -166,21 +167,12 @@ public class AllegrexResolveImports {
                 } else if (!funcName.equals(f.getName())) {
                     f.setName(funcName, SourceType.ANALYSIS);
                 }
-                ModuleType moduleClass = new ModuleType(program);
-                moduleClass.createModule(moduleName);
-                moduleClass.applyFunctionSignature(moduleName, nidHex, f);
 
-                ExternalLocation extLoc = extMan.addExtFunction(
-                        lib,
-                        funcName,
-                        stubAddr,
-                        SourceType.ANALYSIS
-                );
+                ExternalLocation extLoc = extMan.addExtFunction(lib, funcName, stubAddr, SourceType.ANALYSIS);
 
                 Function extFunc = extLoc.getFunction();
 
                 if (extFunc != null) {
-                    moduleClass.applyFunctionSignature(moduleName, nidHex, extFunc);
                     f.setThunkedFunction(extFunc);
                 }
 
@@ -188,7 +180,9 @@ public class AllegrexResolveImports {
 
             }
 
-            if (numFuncs > 0) tracker.funcStubs.add(new StubInfo(moduleName, stubBase, numFuncs * 8));
+            if (numFuncs > 0) {
+                tracker.funcStubs.add(new StubInfo(moduleName, stubBase, numFuncs * 8));
+            }
             int extra_var_bytes = 0;
 
             for (int i = 0; i < numVars; i++) {
@@ -208,9 +202,7 @@ public class AllegrexResolveImports {
 
                 while (true) {
 
-                    int value = memory.getInt(
-                            relAddr.add(relocIndex * 4)
-                    );
+                    int value = memory.getInt(relAddr.add(relocIndex * 4));
 
                     relocIndex++;
 
@@ -219,7 +211,7 @@ public class AllegrexResolveImports {
                     }
 
                     long rAddrOffset = (value & 0x03FFFFFFL) * 4;
-                    Address rAddr = toAddr(program,rAddrOffset);
+                    Address rAddr = toAddr(program, rAddrOffset);
 
                     int rtype = (value >>> 26) & 0x3F;
 
@@ -243,12 +235,11 @@ public class AllegrexResolveImports {
                             msg = "MIPS_RELOC " + rtype + ": " + vName + " from " + moduleName;
                             break;
                     }
-                    
-                    //program.getListing().setComment(rAddr, CodeUnit.EOL_COMMENT, msg);
+
                     extra_var_bytes += relocIndex * 4;
                 }
                 if (numVars > 0) {
-                tracker.varsStubs.add(new StubInfo(moduleName, varsBase, numVars * 8 + extra_var_bytes));
+                    tracker.varsStubs.add(new StubInfo(moduleName, varsBase, numVars * 8 + extra_var_bytes));
                 }
             }
 
@@ -261,10 +252,11 @@ public class AllegrexResolveImports {
                     || guess < tracker.sceResidentStart.getOffset()) {
                 tracker.sceResidentStart = toAddr(program, guess);
             }
-            
+
         }
     }
-        private static Object[] createModuleImportStructs(Program program) throws Exception {
+
+    private static Object[] createModuleImportStructs(Program program) throws Exception {
         DataTypeManager dataTypeManager = program.getDataTypeManager();
 
         EnumDataType sceLibAttr = new EnumDataType(new CategoryPath("/PSP"), "SceLibAttr", 2);
@@ -291,13 +283,12 @@ public class AllegrexResolveImports {
         sceStub_dt.add(new PointerDataType(VoidDataType.dataType), "nids_ptr", null);
         sceStub_dt.add(new PointerDataType(VoidDataType.dataType), "stubs_ptr", null);
 
-
-        Structure dt1 = (Structure) dataTypeManager.addDataType( sceStub_dt, DataTypeConflictHandler.DEFAULT_HANDLER);
+        Structure dt1 = (Structure) dataTypeManager.addDataType(sceStub_dt, DataTypeConflictHandler.DEFAULT_HANDLER);
 
         sceStub_dt.setName("SceStubLibEntryVar");
         sceStub_dt.add(new PointerDataType(VoidDataType.dataType), "vars_ptr", null);
 
-        Structure dt2 = (Structure) dataTypeManager.addDataType( sceStub_dt, DataTypeConflictHandler.DEFAULT_HANDLER);
+        Structure dt2 = (Structure) dataTypeManager.addDataType(sceStub_dt, DataTypeConflictHandler.DEFAULT_HANDLER);
 
         sceStub_dt.setName("SceStubLibEntryVarEx");
         sceStub_dt.add(UnsignedShortDataType.dataType, "num_vars_2", null);

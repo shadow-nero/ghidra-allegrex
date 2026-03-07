@@ -3,7 +3,6 @@
 // @author Ethanol (Original Script)
 // @author SHADOW (Ghidra Java Implementation)
 // @category Analysis
-
 package allegrex.analysis;
 // Ghidra Util Static
 
@@ -173,9 +172,6 @@ public class AllegrexResolveExports {
                 placeDataType(program, nids_base.add(numFuncs * 4), new ArrayDataType(UnsignedIntegerDataType.dataType, numVars, 4));
                 addLabel(program, stubBase.add(numFuncs * 4), moduleName, true, false);
             }
-            //
-            // PIVOT TABLES
-            // ------------------------
             tracker.sceResidentStart = tracker.sceResidentStart == null
                     ? nids_base
                     : (tracker.sceResidentStart.getOffset() > nids_base.getOffset()

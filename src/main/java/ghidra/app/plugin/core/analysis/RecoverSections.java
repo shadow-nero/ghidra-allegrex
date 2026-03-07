@@ -3,7 +3,6 @@
 // @author Ethanol (Original Script)
 // @author SHADOW (Ghidra Java Implementation)
 // @category Analysis
-
 package allegrex.analysis;
 
 // Ghidra
@@ -24,9 +23,11 @@ public class RecoverSections {
         String moduleName = new String(bytes).trim().replace(" ", "_");
 
         long gp = sceModuleInfo.getComponent(4).getUnsignedInt(0);
-        if (gp != 0) addLabel(program, toAddr(program, gp), "_gp", true, true);
+        if (gp != 0) {
+            addLabel(program, toAddr(program, gp), "_gp", true, true);
+        }
         SectionTracker tracker = new SectionTracker();
-        
+
         // Exports
         Address exportsAddr = toAddr(program, sceModuleInfo.getComponent(5).getUnsignedInt(0));
         Address exportsEnd = toAddr(program, sceModuleInfo.getComponent(6).getUnsignedInt(0));
@@ -51,7 +52,6 @@ public class RecoverSections {
         test2.Resolve(exportsAddr, exportsEnd, moduleName, tracker, nid);
 
         // imports
-        
         Address importsAddr = toAddr(program, sceModuleInfo.getComponent(7).getUnsignedInt(0));
         Address importsEnd = toAddr(program, sceModuleInfo.getComponent(8).getUnsignedInt(0));
         Address importsTop = importsAddr.subtract(4);
@@ -63,7 +63,9 @@ public class RecoverSections {
         long ImportsSize = importsEnd.getOffset() - importsAddr.getOffset();
         createMemBlock(program, importsTop, 4, ".lib.stub.top", true, false, false);
 
-        if (ImportsSize != 0) createMemBlock(program, importsAddr, (int)ImportsSize, ".lib.stub", true, false, false);
+        if (ImportsSize != 0) {
+            createMemBlock(program, importsAddr, (int) ImportsSize, ".lib.stub", true, false, false);
+        }
         createMemBlock(program, importsEnd, 4, ".lib.stub.btm", true, false, false);
 
         addLabel(program, importsTop, "_begin_of_section_lib_stub", true, false);
@@ -71,7 +73,7 @@ public class RecoverSections {
 
         AllegrexResolveImports test = new AllegrexResolveImports(program);
         test.Resolve(importsAddr, importsEnd, tracker, nid);
-        
+
         if (tracker.sceResidentStart != null) {
             createMemBlock(program, tracker.sceResidentStart, tracker.sceResidentSize, ".rodata.sceResident", true, false, false);
         }
@@ -80,6 +82,7 @@ public class RecoverSections {
         }
 
     }
+
     private static Data findAndModuleInfoStruct(Program program) throws Exception {
         Structure sceModuleInfoDt = createModuleInfoStruct(program);
         int sceModuleInfoDt_len = sceModuleInfoDt.getLength();
